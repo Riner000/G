@@ -1,221 +1,223 @@
--- [[ ROBLOX ADVANCED VISUAL ROBUX & FAKE PURCHASE CONTROL PANEL ]]
-if not game:IsLoaded() then game.Loaded:Wait() end
+--// Roblox GUI Runtime Debugger
+--// Mobile/VNG Friendly
+--// Debug Window + Copy Button
 
-local CoreGui = game:GetService("CoreGui")
-local MarketplaceService = game:GetService("MarketplaceService")
-local RunService = game:GetService("RunService")
-local SoundService = game:GetService("SoundService")
-local UserInputService = game:GetService("UserInputService")
-local TweenService = game:GetService("TweenService")
-local LocalPlayer = game:GetService("Players").LocalPlayer
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
 
--- =========================================================================
--- QUẢN LÝ TRẠNG THÁI SỐ DƯ (Số mặc định ban đầu là 9999)
--- =========================================================================
-_G.VisualRobuxAmount = 9999 
-local PROCESSING_DELAY = 2.0 -- Thời gian xoay vòng chờ (giây)
-local SUCCESS_SFX_ID = "rbxassetid://9069609268" -- Âm thanh ăn mừng gốc
+local WATCH_CLASSES = {
+    TextLabel = true,
+    TextButton = true,
+    ImageButton = true,
+    Frame = true,
+    ScreenGui = true,
+    ScrollingFrame = true
+}
 
-local SuccessSound = Instance.new("Sound")
-SuccessSound.SoundId = SUCCESS_SFX_ID
-SuccessSound.Volume = 0.6
-SuccessSound.Parent = SoundService
+local KEYWORDS = {
+    "buy",
+    "purchase",
+    "robux",
+    "confirm",
+    "success",
+    "gift",
+    "donate",
+    "premium",
+    "prompt",
+    "mua",
+    "shop"
+}
 
--- =========================================================================
--- NHÁNH 1: ĐỒNG BỘ SỐ ROBUX VÀO GUI GỐC CỦA ROBLOX (CHẠY 60 LẦN/GIÂY)
--- =========================================================================
-local function SynchronizeRobloxNativeGUI()
-    local RobloxGui = CoreGui:FindFirstChild("RobloxGui")
-    if not RobloxGui then return end
-    for _, v in pairs(RobloxGui:GetDescendants()) do
-        if v:IsA("TextLabel") then
-            if v.Name == "RobuxBalanceText" or v.Name == "CurrentBalance" or v.Name == "BalanceText" then
-                v.Text = tostring(_G.VisualRobuxAmount) .. " Robux"
-            elseif string.find(v.Text, "Balance:") or string.find(v.Text, "Số dư:") then
-                local prefix = string.find(v.Text, "Số dư:") and "Số dư: R$ " or "Balance: R$ "
-                v.Text = prefix .. tostring(_G.VisualRobuxAmount)
-            end
-        end
+local logs = {}
+
+--========================
+-- COPY FUNCTION
+--========================
+
+local function copyText(str)
+
+    if setclipboard then
+        setclipboard(str)
+        print("Copied to clipboard")
     end
+
 end
-RunService.RenderStepped:Connect(function() pcall(SynchronizeRobloxNativeGUI) end)
 
--- =========================================================================
--- NHÁNH 2: BẪY CHẶN GIAO DỊCH THẬT & ÉP BẢNG THẬT TRỪ TIỀN ẢO
--- =========================================================================
-local MT = getrawmetatable(game)
-local Old_Namecall = MT.__namecall
-setreadonly(MT, false)
-MT.__namecall = newcclosure(function(Self, ...)
-    local Args = {...}
-    local Method = getnamecallmethod()
-    if Self == MarketplaceService and (Method == "PromptGamePassPurchase" or Method == "PromptPurchase" or Method == "PromptProductPurchase") then
-        local AssetId = Args[2] or 0
-        task.spawn(function()
-            task.wait(0.3)
-            local RobloxGui = CoreGui:FindFirstChild("RobloxGui")
-            if not RobloxGui then return end
-            for _, btn in pairs(RobloxGui:GetDescendants()) do
-                if btn:IsA("TextButton") and (btn.Name == "ConfirmButton" or string.find(btn.Name:lower(), "buy")) then
-                    local ClickSignal
-                    ClickSignal = btn.MouseButton1Click:Connect(function()
-                        ClickSignal:Disconnect()
-                        task.wait(PROCESSING_DELAY) -- Chờ vòng xoay Processing...
-                        
-                        -- TỰ ĐỘNG TRỪ SỐ ROBUX ẢO ĐI 150 KHI MUA THÀNH CÔNG
-                        _G.VisualRobuxAmount = _G.VisualRobuxAmount - 150
-                        
-                        SuccessSound:Play() -- Phát tiếng chuông "ting"
-                        
-                        -- Bắn tín hiệu giả ép GUI gốc hiện dấu tích xanh thành công
-                        if Method == "PromptGamePassPurchase" then
-                            MarketplaceService.PromptGamePassPurchaseFinished:Fire(LocalPlayer, AssetId, true)
-                        elseif Method == "PromptProductPurchase" then
-                            MarketplaceService.PromptProductPurchaseFinished:Fire(LocalPlayer.UserId, AssetId, true)
-                        else
-                            MarketplaceService.PromptPurchaseFinished:Fire(LocalPlayer, AssetId, true)
-                        end
-                    end)
-                    break
-                end
-            end
-        end)
-        return -- Chặn đứng lệnh mua gốc gửi lên Server để bảo vệ tiền thật
-    end
-    return Old_Namecall(Self, ...)
-end)
-setreadonly(MT, true)
-
--- =========================================================================
--- NHÁNH 3: XÂY DỰNG MENU ĐIỀU KHIỂN TRÊN MÀN HÌNH (GUI ĐÓNG/MỞ KÉO THẢ)
--- =========================================================================
-if CoreGui:FindFirstChild("RobuxControlSystem") then CoreGui.RobuxControlSystem:Destroy() end
+--========================
+-- GUI
+--========================
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "RobuxControlSystem"
-ScreenGui.Parent = CoreGui
+ScreenGui.Name = "RuntimeDebugger"
 ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = game.CoreGui
 
--- NÚT MỞ MENU
-local ToggleBtn = Instance.new("TextButton")
-ToggleBtn.Size = UDim2.new(0, 80, 0, 35)
-ToggleBtn.Position = UDim2.new(0.02, 0, 0.2, 0)
-ToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 132, 255)
-ToggleBtn.Text = "Mở Menu"
-ToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-ToggleBtn.TextSize = 14
-ToggleBtn.Font = Enum.Font.SourceSansBold
-ToggleBtn.Parent = ScreenGui
+-- OPEN BUTTON
 
-local ToggleCorner = Instance.new("UICorner")
-ToggleCorner.CornerRadius = UDim.new(0, 6)
-ToggleCorner.Parent = ToggleBtn
+local OpenButton = Instance.new("TextButton")
+OpenButton.Size = UDim2.new(0,120,0,40)
+OpenButton.Position = UDim2.new(0,20,0.5,-20)
+OpenButton.Text = "OPEN DEBUG"
+OpenButton.Parent = ScreenGui
 
--- KHUNG MENU CHÍNH
-local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 260, 0, 180)
-MainFrame.Position = UDim2.new(0.5, -130, 0.4, -90)
-MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-MainFrame.BorderSizePixel = 0
-MainFrame.Visible = false
-MainFrame.Parent = ScreenGui
+-- MAIN FRAME
 
-local MainCorner = Instance.new("UICorner")
-MainCorner.CornerRadius = UDim.new(0, 8)
-MainCorner.Parent = MainFrame
+local Main = Instance.new("Frame")
+Main.Size = UDim2.new(0,500,0,350)
+Main.Position = UDim2.new(0.5,-250,0.5,-175)
+Main.Visible = false
+Main.Parent = ScreenGui
+
+-- TITLE
 
 local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, -30, 0, 35)
-Title.Position = UDim2.new(0, 10, 0, 0)
-Title.Text = "Hệ Thống Robux Ảo"
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.TextSize = 16
-Title.Font = Enum.Font.SourceSansBold
-Title.TextXAlignment = Enum.TextXAlignment.Left
-Title.BackgroundTransparency = 1
-Title.Parent = MainFrame
+Title.Size = UDim2.new(1,0,0,40)
+Title.Text = "GUI DEBUG CONSOLE"
+Title.Parent = Main
 
--- NÚT ĐÓNG (X)
-local CloseBtn = Instance.new("TextButton")
-CloseBtn.Size = UDim2.new(0, 30, 0, 30)
-CloseBtn.Position = UDim2.new(1, -35, 0, 5)
-CloseBtn.BackgroundTransparency = 1
-CloseBtn.Text = "✕"
-CloseBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
-CloseBtn.TextSize = 18
-CloseBtn.Font = Enum.Font.SourceSansBold
-CloseBtn.Parent = MainFrame
+-- SCROLL
 
--- Ô NHẬP SỐ ROBUX
-local InputBox = Instance.new("TextBox")
-InputBox.Size = UDim2.new(0, 220, 0, 40)
-InputBox.Position = UDim2.new(0, 20, 0, 55)
-InputBox.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-InputBox.BorderSizePixel = 0
-InputBox.Text = ""
-InputBox.PlaceholderText = "Nhập số Robux ảo tại đây..."
-InputBox.TextColor3 = Color3.fromRGB(255, 255, 255)
-InputBox.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
-InputBox.TextSize = 15
-InputBox.Font = Enum.Font.SourceSans
-InputBox.Parent = MainFrame
+local Scroll = Instance.new("ScrollingFrame")
+Scroll.Size = UDim2.new(1,-10,1,-50)
+Scroll.Position = UDim2.new(0,5,0,45)
+Scroll.CanvasSize = UDim2.new(0,0,0,0)
+Scroll.Parent = Main
 
-local InputCorner = Instance.new("UICorner")
-InputCorner.CornerRadius = UDim.new(0, 5)
-InputCorner.Parent = InputBox
+local Layout = Instance.new("UIListLayout")
+Layout.Parent = Scroll
 
--- NÚT XÁC NHẬN ĐỔI
-local ConfirmBtn = Instance.new("TextButton")
-ConfirmBtn.Size = UDim2.new(0, 220, 0, 40)
-ConfirmBtn.Position = UDim2.new(0, 20, 0, 115)
-ConfirmBtn.BackgroundColor3 = Color3.fromRGB(0, 175, 100)
-ConfirmBtn.Text = "XÁC NHẬN ĐỔI"
-ConfirmBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-ConfirmBtn.TextSize = 15
-ConfirmBtn.Font = Enum.Font.SourceSansBold
-ConfirmBtn.Parent = MainFrame
+-- TOGGLE
 
-local ConfirmCorner = Instance.new("UICorner")
-ConfirmCorner.CornerRadius = UDim.new(0, 5)
-ConfirmCorner.Parent = ConfirmBtn
-
--- =========================================================================
--- LOGIC ĐÓNG MỞ VÀ CƠ CHẾ KÉO THẢ MƯỢT MÀ (Drag Engine)
--- =========================================================================
-ToggleBtn.MouseButton1Click:Connect(function() MainFrame.Visible = not MainFrame.Visible end)
-CloseBtn.MouseButton1Click:Connect(function() MainFrame.Visible = false end)
-
-ConfirmBtn.MouseButton1Click:Connect(function()
-    local text = InputBox.Text
-    local number = tonumber(text:gsub(",", ""))
-    if number then
-        _G.VisualRobuxAmount = number
-        ConfirmBtn.Text = "ĐÃ ĐỔI THÀNH CÔNG!"
-        ConfirmBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
-        task.wait(1.5)
-        ConfirmBtn.Text = "XÁC NHẬN ĐỔI"
-        ConfirmBtn.BackgroundColor3 = Color3.fromRGB(0, 175, 100)
-    else
-        ConfirmBtn.Text = "VUI LÒNG NHẬP SỐ!"
-        ConfirmBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-        task.wait(1.5)
-        ConfirmBtn.Text = "XÁC NHẬN ĐỔI"
-        ConfirmBtn.BackgroundColor3 = Color3.fromRGB(0, 175, 100)
-    end
+OpenButton.MouseButton1Click:Connect(function()
+    Main.Visible = not Main.Visible
 end)
 
-local dragging, dragInput, dragStart, startPos
-local function update(input)
-    local delta = input.Position - dragStart
-    MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+--========================
+-- ADD LOG
+--========================
+
+local function addLog(text)
+
+    table.insert(logs,text)
+
+    local Holder = Instance.new("Frame")
+    Holder.Size = UDim2.new(1,-5,0,90)
+    Holder.Parent = Scroll
+
+    local Box = Instance.new("TextLabel")
+    Box.Size = UDim2.new(1,-80,1,0)
+    Box.TextXAlignment = Enum.TextXAlignment.Left
+    Box.TextYAlignment = Enum.TextYAlignment.Top
+    Box.TextWrapped = true
+    Box.TextScaled = false
+    Box.Text = text
+    Box.Parent = Holder
+
+    local Copy = Instance.new("TextButton")
+    Copy.Size = UDim2.new(0,70,0,30)
+    Copy.Position = UDim2.new(1,-75,0,5)
+    Copy.Text = "COPY"
+    Copy.Parent = Holder
+
+    Copy.MouseButton1Click:Connect(function()
+        copyText(text)
+    end)
+
+    task.wait()
+
+    Scroll.CanvasSize =
+        UDim2.new(0,0,0,Layout.AbsoluteContentSize.Y + 10)
 end
-MainFrame.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = true dragStart = input.Position startPos = MainFrame.Position
-        input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then dragging = false end end)
+
+--========================
+-- KEYWORD CHECK
+--========================
+
+local function hasKeyword(str)
+
+    str = tostring(str):lower()
+
+    for _,k in pairs(KEYWORDS) do
+        if str:find(k) then
+            return true
+        end
     end
+
+    return false
+end
+
+--========================
+-- DEBUG OBJECT
+--========================
+
+local function debugObject(v)
+
+    local text = ""
+
+    pcall(function()
+        text = v.Text
+    end)
+
+    local output =
+        "Class : "..v.ClassName.."\n" ..
+        "Name  : "..v.Name.."\n" ..
+        "Path  : "..v:GetFullName().."\n" ..
+        "Text  : "..text
+
+    print(output)
+
+    addLog(output)
+end
+
+--========================
+-- CHECK GUI
+--========================
+
+local function check(v)
+
+    if not WATCH_CLASSES[v.ClassName] then
+        return
+    end
+
+    local found = false
+
+    if hasKeyword(v.Name) then
+        found = true
+    end
+
+    pcall(function()
+        if v.Text and hasKeyword(v.Text) then
+            found = true
+        end
+    end)
+
+    if found then
+        debugObject(v)
+    end
+end
+
+--========================
+-- EXISTING GUI
+--========================
+
+for _,v in pairs(game:GetDescendants()) do
+    task.spawn(function()
+        check(v)
+    end)
+end
+
+--========================
+-- RUNTIME GUI HOOK
+--========================
+
+game.DescendantAdded:Connect(function(v)
+
+    task.wait(0.05)
+
+    pcall(function()
+        check(v)
+    end)
+
 end)
-MainFrame.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then dragInput = input end
-end)
-UserInputService.InputChanged:Connect(function(input) if input == dragInput and dragging then update(input) end end)
+
+print("GUI DEBUGGER STARTED")
