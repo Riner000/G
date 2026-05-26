@@ -1,30 +1,21 @@
 --// Script By Summer Studio
+--// Roblox Real Purchase Visual
 --// Mobile/VNG Friendly
 
-local Players = game:GetService("Players")
-local HttpService = game:GetService("HttpService")
 local CoreGui = game:GetService("CoreGui")
-
-local LocalPlayer = Players.LocalPlayer
+local HttpService = game:GetService("HttpService")
+local UIS = game:GetService("UserInputService")
 
 local VisualRobux = 0
+local LastPrice = 0
 local Webhook = ""
-
-local KEYWORDS = {
-    "robux",
-    "purchase",
-    "buy",
-    "confirm",
-    "donate",
-    "gift"
-}
 
 --========================
 -- GUI
 --========================
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "SummerStudioGui"
+ScreenGui.Name = "SummerStudio"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = CoreGui
 
@@ -32,21 +23,21 @@ ScreenGui.Parent = CoreGui
 -- OPEN ICON
 --========================
 
-local OpenButton = Instance.new("TextButton")
-OpenButton.Parent = ScreenGui
-OpenButton.Size = UDim2.new(0,50,0,50)
-OpenButton.Position = UDim2.new(0,20,0.5,-25)
-OpenButton.BackgroundColor3 = Color3.fromRGB(30,30,30)
-OpenButton.BackgroundTransparency = 0.2
-OpenButton.Text = "O"
-OpenButton.TextScaled = true
-OpenButton.TextColor3 = Color3.new(1,1,1)
-OpenButton.BorderSizePixel = 2
-OpenButton.BorderColor3 = Color3.fromRGB(120,120,120)
+local Open = Instance.new("TextButton")
+Open.Parent = ScreenGui
+Open.Size = UDim2.new(0,55,0,55)
+Open.Position = UDim2.new(0,20,0.5,-27)
+Open.Text = "O"
+Open.TextScaled = true
+Open.TextColor3 = Color3.new(1,1,1)
+Open.BackgroundColor3 = Color3.fromRGB(35,35,35)
+Open.BackgroundTransparency = 0.2
+Open.BorderColor3 = Color3.fromRGB(120,120,120)
+Open.BorderSizePixel = 2
 
 local OpenCorner = Instance.new("UICorner")
 OpenCorner.CornerRadius = UDim.new(1,0)
-OpenCorner.Parent = OpenButton
+OpenCorner.Parent = Open
 
 --========================
 -- MAIN GUI
@@ -54,36 +45,30 @@ OpenCorner.Parent = OpenButton
 
 local Main = Instance.new("Frame")
 Main.Parent = ScreenGui
-Main.Size = UDim2.new(0,320,0,260)
-Main.Position = UDim2.new(0.5,-160,0.5,-130)
-Main.BackgroundColor3 = Color3.fromRGB(25,25,25)
+Main.Size = UDim2.new(0,320,0,270)
+Main.Position = UDim2.new(0.5,-160,0.5,-135)
+Main.BackgroundColor3 = Color3.fromRGB(20,20,20)
 Main.Visible = false
 
 local MainCorner = Instance.new("UICorner")
 MainCorner.CornerRadius = UDim.new(0,12)
 MainCorner.Parent = Main
 
--- TITLE
-
 local Title = Instance.new("TextLabel")
 Title.Parent = Main
 Title.Size = UDim2.new(1,0,0,40)
 Title.BackgroundTransparency = 1
 Title.Text = "Script By Summer Studio"
-Title.TextColor3 = Color3.new(1,1,1)
 Title.TextScaled = true
-
--- CLOSE
+Title.TextColor3 = Color3.new(1,1,1)
 
 local Close = Instance.new("TextButton")
 Close.Parent = Main
 Close.Size = UDim2.new(0,30,0,30)
 Close.Position = UDim2.new(1,-35,0,5)
 Close.Text = "X"
-Close.BackgroundColor3 = Color3.fromRGB(50,50,50)
 Close.TextColor3 = Color3.new(1,1,1)
-
--- INPUT LABEL
+Close.BackgroundColor3 = Color3.fromRGB(45,45,45)
 
 local Label = Instance.new("TextLabel")
 Label.Parent = Main
@@ -91,82 +76,70 @@ Label.Size = UDim2.new(1,0,0,30)
 Label.Position = UDim2.new(0,0,0,60)
 Label.BackgroundTransparency = 1
 Label.Text = "Nhập số lượng:"
-Label.TextColor3 = Color3.new(1,1,1)
 Label.TextScaled = true
-
--- INPUT
+Label.TextColor3 = Color3.new(1,1,1)
 
 local Input = Instance.new("TextBox")
 Input.Parent = Main
 Input.Size = UDim2.new(0.8,0,0,40)
 Input.Position = UDim2.new(0.1,0,0,95)
-Input.PlaceholderText = "Robux..."
+Input.PlaceholderText = "9999"
 Input.Text = ""
-Input.BackgroundColor3 = Color3.fromRGB(40,40,40)
-Input.TextColor3 = Color3.new(1,1,1)
 Input.TextScaled = true
+Input.BackgroundColor3 = Color3.fromRGB(35,35,35)
+Input.TextColor3 = Color3.new(1,1,1)
 
 local InputCorner = Instance.new("UICorner")
 InputCorner.CornerRadius = UDim.new(0,10)
 InputCorner.Parent = Input
-
--- RECEIVE BUTTON
 
 local Receive = Instance.new("TextButton")
 Receive.Parent = Main
 Receive.Size = UDim2.new(0.5,0,0,40)
 Receive.Position = UDim2.new(0.25,0,0,150)
 Receive.Text = "Nhận"
-Receive.BackgroundColor3 = Color3.fromRGB(60,60,60)
-Receive.TextColor3 = Color3.new(1,1,1)
 Receive.TextScaled = true
+Receive.TextColor3 = Color3.new(1,1,1)
+Receive.BackgroundColor3 = Color3.fromRGB(50,50,50)
 
 local ReceiveCorner = Instance.new("UICorner")
 ReceiveCorner.CornerRadius = UDim.new(0,10)
 ReceiveCorner.Parent = Receive
 
--- SUCCESS
-
 local Success = Instance.new("TextLabel")
 Success.Parent = Main
-Success.Size = UDim2.new(1,0,0,40)
-Success.Position = UDim2.new(0,0,1,-45)
+Success.Size = UDim2.new(1,0,0,35)
+Success.Position = UDim2.new(0,0,1,-40)
 Success.BackgroundTransparency = 1
 Success.Text = ""
-Success.TextColor3 = Color3.fromRGB(0,255,0)
 Success.TextScaled = true
-
--- CONSOLE BUTTON
+Success.TextColor3 = Color3.fromRGB(0,255,0)
 
 local ConsoleButton = Instance.new("TextButton")
 ConsoleButton.Parent = Main
 ConsoleButton.Size = UDim2.new(0,90,0,30)
 ConsoleButton.Position = UDim2.new(0.5,-45,0,205)
 ConsoleButton.Text = "Console"
-ConsoleButton.BackgroundColor3 = Color3.fromRGB(45,45,45)
 ConsoleButton.TextColor3 = Color3.new(1,1,1)
+ConsoleButton.BackgroundColor3 = Color3.fromRGB(45,45,45)
+
+--========================
+-- CONSOLE
+--========================
+
+local Console = Instance.new("Frame")
+Console.Parent = ScreenGui
+Console.Size = UDim2.new(0,360,0,280)
+Console.Position = UDim2.new(0.5,-180,0.5,-140)
+Console.BackgroundColor3 = Color3.fromRGB(18,18,18)
+Console.Visible = false
 
 local ConsoleCorner = Instance.new("UICorner")
-ConsoleCorner.CornerRadius = UDim.new(0,10)
-ConsoleCorner.Parent = ConsoleButton
-
---========================
--- CONSOLE GUI
---========================
-
-local ConsoleFrame = Instance.new("Frame")
-ConsoleFrame.Parent = ScreenGui
-ConsoleFrame.Size = UDim2.new(0,360,0,280)
-ConsoleFrame.Position = UDim2.new(0.5,-180,0.5,-140)
-ConsoleFrame.BackgroundColor3 = Color3.fromRGB(20,20,20)
-ConsoleFrame.Visible = false
-
-local ConsoleCorner2 = Instance.new("UICorner")
-ConsoleCorner2.CornerRadius = UDim.new(0,12)
-ConsoleCorner2.Parent = ConsoleFrame
+ConsoleCorner.CornerRadius = UDim.new(0,12)
+ConsoleCorner.Parent = Console
 
 local ConsoleTitle = Instance.new("TextLabel")
-ConsoleTitle.Parent = ConsoleFrame
+ConsoleTitle.Parent = Console
 ConsoleTitle.Size = UDim2.new(1,0,0,40)
 ConsoleTitle.BackgroundTransparency = 1
 ConsoleTitle.Text = "Webhook Console"
@@ -174,31 +147,30 @@ ConsoleTitle.TextScaled = true
 ConsoleTitle.TextColor3 = Color3.new(1,1,1)
 
 local ConsoleClose = Instance.new("TextButton")
-ConsoleClose.Parent = ConsoleFrame
+ConsoleClose.Parent = Console
 ConsoleClose.Size = UDim2.new(0,30,0,30)
 ConsoleClose.Position = UDim2.new(1,-35,0,5)
 ConsoleClose.Text = "X"
-ConsoleClose.BackgroundColor3 = Color3.fromRGB(50,50,50)
 ConsoleClose.TextColor3 = Color3.new(1,1,1)
+ConsoleClose.BackgroundColor3 = Color3.fromRGB(45,45,45)
 
 local WebhookBox = Instance.new("TextBox")
-WebhookBox.Parent = ConsoleFrame
+WebhookBox.Parent = Console
 WebhookBox.Size = UDim2.new(0.9,0,0,40)
 WebhookBox.Position = UDim2.new(0.05,0,0,55)
 WebhookBox.PlaceholderText = "Discord Webhook"
 WebhookBox.Text = ""
+WebhookBox.TextScaled = true
 WebhookBox.BackgroundColor3 = Color3.fromRGB(35,35,35)
 WebhookBox.TextColor3 = Color3.new(1,1,1)
-WebhookBox.TextScaled = true
 
 local Logs = Instance.new("TextBox")
-Logs.Parent = ConsoleFrame
+Logs.Parent = Console
 Logs.Size = UDim2.new(0.9,0,0.55,0)
 Logs.Position = UDim2.new(0.05,0,0,110)
-Logs.Text = ""
 Logs.MultiLine = true
-Logs.ClearTextOnFocus = false
 Logs.TextEditable = false
+Logs.ClearTextOnFocus = false
 Logs.TextWrapped = false
 Logs.TextXAlignment = Enum.TextXAlignment.Left
 Logs.TextYAlignment = Enum.TextYAlignment.Top
@@ -209,7 +181,7 @@ Logs.TextColor3 = Color3.new(1,1,1)
 -- DRAG
 --========================
 
-local function makeDrag(gui)
+local function Drag(gui)
 
     local dragging = false
     local dragInput
@@ -226,9 +198,11 @@ local function makeDrag(gui)
             startPos = gui.Position
 
             input.Changed:Connect(function()
+
                 if input.UserInputState == Enum.UserInputState.End then
                     dragging = false
                 end
+
             end)
         end
     end)
@@ -239,9 +213,10 @@ local function makeDrag(gui)
         or input.UserInputType == Enum.UserInputType.Touch then
             dragInput = input
         end
+
     end)
 
-    game:GetService("UserInputService").InputChanged:Connect(function(input)
+    UIS.InputChanged:Connect(function(input)
 
         if input == dragInput and dragging then
 
@@ -253,19 +228,20 @@ local function makeDrag(gui)
                 startPos.Y.Scale,
                 startPos.Y.Offset + delta.Y
             )
+
         end
     end)
 end
 
-makeDrag(OpenButton)
-makeDrag(Main)
-makeDrag(ConsoleFrame)
+Drag(Open)
+Drag(Main)
+Drag(Console)
 
 --========================
 -- OPEN/CLOSE
 --========================
 
-OpenButton.MouseButton1Click:Connect(function()
+Open.MouseButton1Click:Connect(function()
     Main.Visible = not Main.Visible
 end)
 
@@ -274,11 +250,11 @@ Close.MouseButton1Click:Connect(function()
 end)
 
 ConsoleButton.MouseButton1Click:Connect(function()
-    ConsoleFrame.Visible = not ConsoleFrame.Visible
+    Console.Visible = not Console.Visible
 end)
 
 ConsoleClose.MouseButton1Click:Connect(function()
-    ConsoleFrame.Visible = false
+    Console.Visible = false
 end)
 
 --========================
@@ -312,7 +288,7 @@ WebhookBox.FocusLost:Connect(function()
     Webhook = WebhookBox.Text
 end)
 
-local function sendWebhook(msg)
+local function SendWebhook(msg)
 
     if Webhook == "" then
         return
@@ -336,53 +312,94 @@ local function sendWebhook(msg)
 end
 
 --========================
--- PATCH ROBUX GUI
+-- PATCH
 --========================
 
-local function patch(v)
+local function Patch(v)
 
-    if not (
-        v:IsA("TextLabel")
-        or v:IsA("TextButton")
-    ) then
+    if not v:IsA("TextLabel") then
         return
     end
 
-    local text = ""
+    local text = v.Text or ""
 
-    pcall(function()
-        text = v.Text
-    end)
+    -- ROBUX BALANCE
 
-    local lower = string.lower(text)
+    if v.Name == "RobuxPrice" then
 
-    for _,k in pairs(KEYWORDS) do
+        v.RichText = true
 
-        if string.find(lower,k) then
+        v.Text =
+        '<font family="rbxasset://LuaPackages/Packages/_Index/BuilderIcons/BuilderIcons/BuilderIcons.json" weight="400">robux</font> '..VisualRobux
 
-            Logs.Text =
-                Logs.Text ..
-                "\n["..v.Name.."] "..text
+    end
 
-            sendWebhook(
-                "["..v.Name.."] "..text
-            )
+    -- ITEM PRICE
 
-            if v.Name == "ItemCost"
-            or v.Name == "RobuxPrice" then
+    if v.Name == "ItemCost" then
 
-                v.Text =
-                '<font family="rbxasset://LuaPackages/Packages/_Index/BuilderIcons/BuilderIcons/BuilderIcons.json" weight="400">robux</font> '..VisualRobux
+        local num = tonumber(
+            string.match(text,"%d+")
+        )
 
+        if num then
+            LastPrice = num
+        end
+
+    end
+
+    -- BUY BUTTON
+
+    if v.Name == "ButtonText" then
+
+        if string.find(
+            string.lower(text),
+            "mua"
+        ) then
+
+            local button = v.Parent
+
+            if button and button:IsA("TextButton") then
+
+                button.MouseButton1Click:Connect(function()
+
+                    if VisualRobux >= LastPrice then
+
+                        VisualRobux =
+                        VisualRobux - LastPrice
+
+                        task.wait(0.2)
+
+                        for _,x in pairs(CoreGui:GetDescendants()) do
+
+                            if x:IsA("TextLabel")
+                            and x.Name == "RobuxPrice" then
+
+                                x.RichText = true
+
+                                x.Text =
+                                '<font family="rbxasset://LuaPackages/Packages/_Index/BuilderIcons/BuilderIcons/BuilderIcons.json" weight="400">robux</font> '..VisualRobux
+
+                            end
+                        end
+
+                        Logs.Text =
+                        Logs.Text ..
+                        "\n[FAKE PURCHASE] "..LastPrice
+
+                        SendWebhook(
+                            "[FAKE PURCHASE] "..LastPrice
+                        )
+
+                    end
+                end)
             end
-
-            break
         end
     end
 end
 
 --========================
--- HOOK GUI
+-- HOOK
 --========================
 
 game.CoreGui.DescendantAdded:Connect(function(v)
@@ -390,7 +407,7 @@ game.CoreGui.DescendantAdded:Connect(function(v)
     task.defer(function()
 
         pcall(function()
-            patch(v)
+            Patch(v)
         end)
 
     end)
