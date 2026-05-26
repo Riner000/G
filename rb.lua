@@ -1,132 +1,126 @@
---// Roblox GUI Runtime Debugger
+--// GUI Runtime Hook + Webhook Input
 --// Mobile/VNG Friendly
---// Debug Window + Copy Button
 
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-
-local WATCH_CLASSES = {
-    TextLabel = true,
-    TextButton = true,
-    ImageButton = true,
-    Frame = true,
-    ScreenGui = true,
-    ScrollingFrame = true
-}
+local HttpService = game:GetService("HttpService")
 
 local KEYWORDS = {
-    "buy",
     "purchase",
-    "robux",
+    "buy",
     "confirm",
-    "success",
-    "gift",
-    "donate",
-    "premium",
-    "prompt",
-    "mua",
-    "shop"
+    "robux",
+    "donate"
 }
 
-local logs = {}
-
---========================
--- COPY FUNCTION
---========================
-
-local function copyText(str)
-
-    if setclipboard then
-        setclipboard(str)
-        print("Copied to clipboard")
-    end
-
-end
+local logged = {}
+local WEBHOOK = ""
 
 --========================
 -- GUI
 --========================
 
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "RuntimeDebugger"
+ScreenGui.Name = "WebhookDebugger"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = game.CoreGui
 
--- OPEN BUTTON
-
-local OpenButton = Instance.new("TextButton")
-OpenButton.Size = UDim2.new(0,120,0,40)
-OpenButton.Position = UDim2.new(0,20,0.5,-20)
-OpenButton.Text = "OPEN DEBUG"
-OpenButton.Parent = ScreenGui
-
--- MAIN FRAME
+-- MAIN
 
 local Main = Instance.new("Frame")
-Main.Size = UDim2.new(0,500,0,350)
-Main.Position = UDim2.new(0.5,-250,0.5,-175)
-Main.Visible = false
+Main.Size = UDim2.new(0,420,0,300)
+Main.Position = UDim2.new(0.5,-210,0.5,-150)
 Main.Parent = ScreenGui
 
 -- TITLE
 
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1,0,0,40)
-Title.Text = "GUI DEBUG CONSOLE"
+Title.Text = "GUI WEBHOOK DEBUGGER"
 Title.Parent = Main
 
--- SCROLL
+-- WEBHOOK BOX
 
-local Scroll = Instance.new("ScrollingFrame")
-Scroll.Size = UDim2.new(1,-10,1,-50)
-Scroll.Position = UDim2.new(0,5,0,45)
-Scroll.CanvasSize = UDim2.new(0,0,0,0)
-Scroll.Parent = Main
+local WebhookBox = Instance.new("TextBox")
+WebhookBox.Size = UDim2.new(1,-20,0,35)
+WebhookBox.Position = UDim2.new(0,10,0,50)
+WebhookBox.PlaceholderText = "Paste Discord Webhook"
+WebhookBox.Text = ""
+WebhookBox.Parent = Main
 
-local Layout = Instance.new("UIListLayout")
-Layout.Parent = Scroll
+-- SAVE BUTTON
 
--- TOGGLE
+local SaveButton = Instance.new("TextButton")
+SaveButton.Size = UDim2.new(0,120,0,35)
+SaveButton.Position = UDim2.new(0,10,0,95)
+SaveButton.Text = "SAVE WEBHOOK"
+SaveButton.Parent = Main
 
-OpenButton.MouseButton1Click:Connect(function()
-    Main.Visible = not Main.Visible
+-- CONSOLE
+
+local Console = Instance.new("TextBox")
+Console.Size = UDim2.new(1,-20,1,-145)
+Console.Position = UDim2.new(0,10,0,140)
+Console.MultiLine = true
+Console.TextWrapped = false
+Console.ClearTextOnFocus = false
+Console.TextXAlignment = Enum.TextXAlignment.Left
+Console.TextYAlignment = Enum.TextYAlignment.Top
+Console.TextEditable = false
+Console.Text = ""
+Console.Parent = Main
+
+--========================
+-- SAVE WEBHOOK
+--========================
+
+SaveButton.MouseButton1Click:Connect(function()
+
+    WEBHOOK = WebhookBox.Text
+
+    Console.Text =
+        Console.Text ..
+        "\n[Webhook Saved]\n"
+
 end)
 
 --========================
--- ADD LOG
+-- CONSOLE ADD
 --========================
 
-local function addLog(text)
+local function addConsole(text)
 
-    table.insert(logs,text)
+    Console.Text =
+        Console.Text ..
+        "\n" ..
+        text ..
+        "\n"
 
-    local Holder = Instance.new("Frame")
-    Holder.Size = UDim2.new(1,-5,0,90)
-    Holder.Parent = Scroll
+end
 
-    local Box = Instance.new("TextLabel")
-    Box.Size = UDim2.new(1,-80,1,0)
-    Box.TextXAlignment = Enum.TextXAlignment.Left
-    Box.TextYAlignment = Enum.TextYAlignment.Top
-    Box.TextWrapped = true
-    Box.TextScaled = false
-    Box.Text = text
-    Box.Parent = Holder
+--========================
+-- SEND WEBHOOK
+--========================
 
-    local Copy = Instance.new("TextButton")
-    Copy.Size = UDim2.new(0,70,0,30)
-    Copy.Position = UDim2.new(1,-75,0,5)
-    Copy.Text = "COPY"
-    Copy.Parent = Holder
+local function send(msg)
 
-    Copy.MouseButton1Click:Connect(function()
-        copyText(text)
+    if WEBHOOK == "" then
+        return
+    end
+
+    pcall(function()
+
+        request({
+            Url = WEBHOOK,
+            Method = "POST",
+            Headers = {
+                ["Content-Type"] = "application/json"
+            },
+            Body = HttpService:JSONEncode({
+                content = "```"..msg.."```"
+            })
+        })
+
     end)
 
-    task.wait()
-
-    Scroll.CanvasSize =
-        UDim2.new(0,0,0,Layout.AbsoluteContentSize.Y + 10)
 end
 
 --========================
@@ -147,77 +141,73 @@ local function hasKeyword(str)
 end
 
 --========================
--- DEBUG OBJECT
---========================
-
-local function debugObject(v)
-
-    local text = ""
-
-    pcall(function()
-        text = v.Text
-    end)
-
-    local output =
-        "Class : "..v.ClassName.."\n" ..
-        "Name  : "..v.Name.."\n" ..
-        "Path  : "..v:GetFullName().."\n" ..
-        "Text  : "..text
-
-    print(output)
-
-    addLog(output)
-end
-
---========================
 -- CHECK GUI
 --========================
 
 local function check(v)
 
-    if not WATCH_CLASSES[v.ClassName] then
+    if logged[v] then
+        return
+    end
+
+    if not (
+        v:IsA("TextLabel")
+        or v:IsA("TextButton")
+        or v:IsA("ImageButton")
+    ) then
         return
     end
 
     local found = false
+    local text = ""
 
     if hasKeyword(v.Name) then
         found = true
     end
 
     pcall(function()
-        if v.Text and hasKeyword(v.Text) then
+
+        text = v.Text or ""
+
+        if hasKeyword(text) then
             found = true
         end
+
     end)
 
     if found then
-        debugObject(v)
+
+        logged[v] = true
+
+        local output =
+            "Class : "..v.ClassName.."\n" ..
+            "Name  : "..v.Name.."\n" ..
+            "Path  : "..v:GetFullName().."\n" ..
+            "Text  : "..text
+
+        print(output)
+
+        addConsole(output)
+
+        send(output)
+
     end
 end
 
 --========================
--- EXISTING GUI
+-- HOOK GUI
 --========================
 
-for _,v in pairs(game:GetDescendants()) do
-    task.spawn(function()
-        check(v)
-    end)
-end
+game.CoreGui.DescendantAdded:Connect(function(v)
 
---========================
--- RUNTIME GUI HOOK
---========================
+    task.defer(function()
 
-game.DescendantAdded:Connect(function(v)
+        pcall(function()
+            check(v)
+        end)
 
-    task.wait(0.05)
-
-    pcall(function()
-        check(v)
     end)
 
 end)
 
-print("GUI DEBUGGER STARTED")
+addConsole("GUI Debugger Started")
