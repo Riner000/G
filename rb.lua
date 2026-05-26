@@ -1,17 +1,43 @@
 --// Script By Summer Studio
---// Roblox Real Purchase Visual (VNG Update)
---// Mobile/VNG Friendly
+--// Fixed + Optimized Version
+--// Roblox Purchase Visual (Visual Only)
+
+--========================================================================
+-- SERVICES
+--========================================================================
 
 local CoreGui = game:GetService("CoreGui")
 local HttpService = game:GetService("HttpService")
 local UIS = game:GetService("UserInputService")
+
+--========================================================================
+-- ANTI DUPLICATE INJECT
+--========================================================================
+
+if CoreGui:FindFirstChild("SummerStudio_VNG") then
+    CoreGui.SummerStudio_VNG:Destroy()
+end
+
+--========================================================================
+-- REQUEST FALLBACK
+--========================================================================
+
+local requestfunc =
+    request or
+    http_request or
+    (syn and syn.request) or
+    (fluxus and fluxus.request)
+
+--========================================================================
+-- VARIABLES
+--========================================================================
 
 local VisualRobux = 0
 local LastPrice = 0
 local Webhook = ""
 
 --========================================================================
--- KHỞI TẠO GUI CHÍNH
+-- MAIN GUI
 --========================================================================
 
 local ScreenGui = Instance.new("ScreenGui")
@@ -20,7 +46,7 @@ ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = CoreGui
 
 --========================================================================
--- NÚT BẬT/TẮT MENU (OPEN ICON)
+-- OPEN BUTTON
 --========================================================================
 
 local Open = Instance.new("TextButton")
@@ -40,7 +66,7 @@ OpenCorner.CornerRadius = UDim.new(1,0)
 OpenCorner.Parent = Open
 
 --========================================================================
--- BẢNG ĐIỀU KHIỂN CHÍNH (MAIN GUI)
+-- MAIN FRAME
 --========================================================================
 
 local Main = Instance.new("Frame")
@@ -58,7 +84,7 @@ local Title = Instance.new("TextLabel")
 Title.Parent = Main
 Title.Size = UDim2.new(1,0,0,40)
 Title.BackgroundTransparency = 1
-Title.Text = "Script By Summer Studio"
+Title.Text = "Summer Studio"
 Title.TextScaled = true
 Title.TextColor3 = Color3.new(1,1,1)
 
@@ -75,7 +101,7 @@ Label.Parent = Main
 Label.Size = UDim2.new(1,0,0,30)
 Label.Position = UDim2.new(0,0,0,60)
 Label.BackgroundTransparency = 1
-Label.Text = "Nhập số lượng Robux ảo:"
+Label.Text = "Nhập số Robux ảo:"
 Label.TextScaled = true
 Label.TextColor3 = Color3.new(1,1,1)
 
@@ -124,7 +150,7 @@ ConsoleButton.TextColor3 = Color3.new(1,1,1)
 ConsoleButton.BackgroundColor3 = Color3.fromRGB(45,45,45)
 
 --========================================================================
--- BẢNG NHẬT KÝ WEBHOOK (CONSOLE)
+-- CONSOLE
 --========================================================================
 
 local Console = Instance.new("Frame")
@@ -158,7 +184,7 @@ local WebhookBox = Instance.new("TextBox")
 WebhookBox.Parent = Console
 WebhookBox.Size = UDim2.new(0.9,0,0,40)
 WebhookBox.Position = UDim2.new(0.05,0,0,55)
-WebhookBox.PlaceholderText = "Dán Discord Webhook vào đây"
+WebhookBox.PlaceholderText = "Discord Webhook"
 WebhookBox.Text = ""
 WebhookBox.TextScaled = true
 WebhookBox.BackgroundColor3 = Color3.fromRGB(35,35,35)
@@ -178,7 +204,7 @@ Logs.BackgroundColor3 = Color3.fromRGB(30,30,30)
 Logs.TextColor3 = Color3.new(1,1,1)
 
 --========================================================================
--- TÍNH NĂNG KÉO THẢ MENU (DRAG FUNCTION)
+-- DRAG
 --========================================================================
 
 local function Drag(gui)
@@ -190,6 +216,7 @@ local function Drag(gui)
     gui.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1
         or input.UserInputType == Enum.UserInputType.Touch then
+
             dragging = true
             dragStart = input.Position
             startPos = gui.Position
@@ -203,7 +230,6 @@ local function Drag(gui)
     end)
 
     gui.InputChanged:Connect(function(input)
-        
         if input.UserInputType == Enum.UserInputType.MouseMovement
         or input.UserInputType == Enum.UserInputType.Touch then
             dragInput = input
@@ -213,6 +239,7 @@ local function Drag(gui)
     UIS.InputChanged:Connect(function(input)
         if input == dragInput and dragging then
             local delta = input.Position - dragStart
+
             gui.Position = UDim2.new(
                 startPos.X.Scale,
                 startPos.X.Offset + delta.X,
@@ -226,8 +253,9 @@ end
 Drag(Open)
 Drag(Main)
 Drag(Console)
+
 --========================================================================
--- ĐÓNG/MỞ GIAO DIỆN
+-- OPEN/CLOSE
 --========================================================================
 
 Open.MouseButton1Click:Connect(function()
@@ -247,33 +275,44 @@ ConsoleClose.MouseButton1Click:Connect(function()
 end)
 
 --========================================================================
--- XỬ LÝ SỐ LƯỢNG ROBUX NHẬP VÀO
+-- UPDATE ROBUX UI
+--========================================================================
+
+local function UpdateRobuxUI()
+    for _, x in pairs(CoreGui:GetDescendants()) do
+        if x:IsA("TextLabel") and x.Name == "RobuxPrice" then
+            x.RichText = false
+            x.Text = "R$ " .. tostring(VisualRobux)
+        end
+    end
+end
+
+--========================================================================
+-- RECEIVE
 --========================================================================
 
 Receive.MouseButton1Click:Connect(function()
+
     local amount = tonumber(Input.Text)
+
     if not amount then
+        Success.Text = "Số không hợp lệ!"
         return
     end
 
     VisualRobux = amount
-    Success.Text = "Chúc mừng bạn đã nhận " .. amount .. " Robux ảo!"
 
-    -- Cập nhật ngay lập tức lên các UI Robux đang có trên màn hình
-    for _, x in pairs(CoreGui:GetDescendants()) do
-        if x:IsA("TextLabel") and x.Name == "RobuxPrice" then
-            x.RichText = true
-            x.Text = '<font family="rbxasset://LuaPackages/Packages/_Index/BuilderIcons/BuilderIcons/BuilderIcons.json" weight="400">robux</font> '..VisualRobux
-        end
-    end
+    UpdateRobuxUI()
 
-    task.delay(2, function()
+    Success.Text = "Đã nhận " .. amount .. " Robux ảo"
+
+    task.delay(2,function()
         Success.Text = ""
     end)
 end)
 
 --========================================================================
--- GỬI DỮ LIỆU ĐẾN DISCORD WEBHOOK
+-- WEBHOOK
 --========================================================================
 
 WebhookBox.FocusLost:Connect(function()
@@ -281,12 +320,18 @@ WebhookBox.FocusLost:Connect(function()
 end)
 
 local function SendWebhook(msg)
+
     if Webhook == "" then
         return
     end
 
+    if not requestfunc then
+        return
+    end
+
     pcall(function()
-        request({
+
+        requestfunc({
             Url = Webhook,
             Method = "POST",
             Headers = {
@@ -296,124 +341,186 @@ local function SendWebhook(msg)
                 content = msg
             })
         })
+
     end)
 end
 
 --========================================================================
--- THUẬT TOÁN QUÉT VÀ XỬ LÝ GIAO DIỆN MUA HÀNG VNG (PATCH)
+-- PATCH SYSTEM
 --========================================================================
 
 local function Patch(v)
+
     if not v:IsA("TextLabel") then
-        -- Quét nếu object truyền vào là TextButton (Nút Mua gốc)
+
         if v:IsA("TextButton") and v.Name == "BuyButton" then
+
             local textLabel = v:FindFirstChild("Text")
-            if textLabel then v = textLabel else return end
+
+            if textLabel then
+                v = textLabel
+            else
+                return
+            end
+
         else
             return
         end
     end
 
-    local text = v.Text or ""
+    local text = tostring(v.Text or "")
 
-    -- 1. ĐÈ HIỂN THỊ ROBUX ẢO TRÊN GIAO DIỆN CHÍNH
+    -- UPDATE ROBUX DISPLAY
+
     if v.Name == "RobuxPrice" then
-        v.RichText = true
-        v.Text = '<font family="rbxasset://LuaPackages/Packages/_Index/BuilderIcons/BuilderIcons/BuilderIcons.json" weight="400">robux</font> '..VisualRobux
+        v.RichText = false
+        v.Text = "R$ " .. tostring(VisualRobux)
     end
 
-    -- 2. GHI NHẬN GIÁ CỦA VẬT PHẨM (ItemCost)
+    -- ITEM COST
+
     if v.Name == "ItemCost" then
-        local num = tonumber(string.match(text, "%d+"))
+
+        local cleaned = text:gsub("[^%d]", "")
+        local num = tonumber(cleaned)
+
         if num then
+
+            local parentObj = v.Parent
+
+            if parentObj then
+                parentObj:SetAttribute("Price", num)
+            end
+
             LastPrice = num
         end
     end
 
-    -- 3. BẮT SỰ KIỆN NÚT "MUA" VÀ GIẢ LẬP GIAO DỊCH VNG
-    if v.Name == "Text" and (string.find(string.lower(text), "mua") or string.find(string.lower(text), "buy")) then
+    -- BUY BUTTON
+
+    if v.Name == "Text"
+    and (
+        string.find(string.lower(text), "mua")
+        or string.find(string.lower(text), "buy")
+    ) then
+
         local buyButton = v.Parent
-        if buyButton and buyButton:IsA("TextButton") and buyButton.Name == "BuyButton" then
-            
-            -- Chống trùng lặp kết nối khi click nhiều lần
+
+        if buyButton
+        and buyButton:IsA("TextButton")
+        and buyButton.Name == "BuyButton" then
+
             if not buyButton:GetAttribute("Hooked") then
+
                 buyButton:SetAttribute("Hooked", true)
 
                 buyButton.MouseButton1Click:Connect(function()
-                    if VisualRobux >= LastPrice then
-                        -- Thực hiện trừ tiền ảo
-                        VisualRobux = VisualRobux - LastPrice
+
+                    local price =
+                        buyButton:GetAttribute("Price")
+                        or LastPrice
+                        or 0
+
+                    if VisualRobux >= price then
+
+                        VisualRobux = VisualRobux - price
+
                         task.wait(0.1)
 
-                        -- Cập nhật lại số dư mới hiển thị lên màn hình
-                        for _, x in pairs(CoreGui:GetDescendants()) do
-                            if x:IsA("TextLabel") and x.Name == "RobuxPrice" then
-                                x.RichText = true
-                                x.Text = '<font family="rbxasset://LuaPackages/Packages/_Index/BuilderIcons/BuilderIcons/BuilderIcons.json" weight="400">robux</font> '..VisualRobux
-                            end
-                        end
+                        UpdateRobuxUI()
 
-                        -- Ghi nhật ký hệ thống
-                        Logs.Text = Logs.Text .. "\n[GIAO DỊCH VNG] Đã mua thành công giá: " .. LastPrice .. " Robux"
-                        SendWebhook("[GIAO DỊCH VNG] Đã mua thành công giá: " .. LastPrice .. " Robux")
+                        Logs.Text =
+                            Logs.Text ..
+                            "\n[SUCCESS] Purchased: " ..
+                            tostring(price)
 
-                        -- DỰNG KHUNG THÔNG BÁO GIẢ LẬP TRÊN GIAO DIỆN ROBLOX
+                        SendWebhook(
+                            "[SUCCESS] Purchased: " ..
+                            tostring(price)
+                        )
+
                         pcall(function()
-                            local sheet = buyButton:FindFirstAncestor("Sheet")
-                            local content = sheet and sheet:FindFirstChild("Content")
-                            
-                            if content then
-                                content.Visible = false -- Ẩn nội dung mua hàng cũ đi
+
+                            local sheet =
+                                buyButton:FindFirstAncestor("Sheet")
+
+                            if not sheet then
+                                return
                             end
 
-                            -- Khởi tạo Frame thông báo thành công
-                            local SuccessFrame = Instance.new("Frame")
+                            local content =
+                                sheet:FindFirstChild("Content")
+
+                            if content then
+                                content.Visible = false
+                            end
+
+                            local SuccessFrame =
+                                Instance.new("Frame")
+
                             SuccessFrame.Name = "VNGSuccessFrame"
-                            SuccessFrame.Size = UDim2.new(1, 0, 1, 0)
+                            SuccessFrame.Size = UDim2.new(1,0,1,0)
                             SuccessFrame.BackgroundTransparency = 1
                             SuccessFrame.Parent = sheet
 
-                            -- Dòng chữ "Giao dịch thành công"
-                            local SuccessTitle = Instance.new("TextLabel")
-                            SuccessTitle.Size = UDim2.new(1, 0, 0, 50)
-                            SuccessTitle.Position = UDim2.new(0, 0, 0.3, 0)
+                            local SuccessTitle =
+                                Instance.new("TextLabel")
+
+                            SuccessTitle.Parent = SuccessFrame
+                            SuccessTitle.Size = UDim2.new(1,0,0,50)
+                            SuccessTitle.Position = UDim2.new(0,0,0.3,0)
                             SuccessTitle.BackgroundTransparency = 1
                             SuccessTitle.Text = "Giao dịch thành công!"
-                            SuccessTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
                             SuccessTitle.TextSize = 24
-                            SuccessTitle.Font = Enum.Font.SourceSansBold
-                            SuccessTitle.Parent = SuccessFrame
+                            SuccessTitle.TextColor3 =
+                                Color3.fromRGB(255,255,255)
 
-                            -- NÚT "OK" ĐỂ TẮT GUI THEO YÊU CẦU CỦA BẠN
-                            local OkButton = Instance.new("TextButton")
-                            OkButton.Name = "OkButton"
-                            OkButton.Size = UDim2.new(0, 120, 0, 40)
-                            OkButton.Position = UDim2.new(0.5, -60, 0.5, 20)
-                            OkButton.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
-                            OkButton.Text = "OK"
-                            OkButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-                            OkButton.TextSize = 18
-                            OkButton.Font = Enum.Font.SourceSansBold
+                            local OkButton =
+                                Instance.new("TextButton")
+
                             OkButton.Parent = SuccessFrame
+                            OkButton.Size = UDim2.new(0,120,0,40)
+                            OkButton.Position =
+                                UDim2.new(0.5,-60,0.5,20)
 
-                            local OkCorner = Instance.new("UICorner")
-                            OkCorner.CornerRadius = UDim.new(0, 8)
+                            OkButton.Text = "OK"
+
+                            OkButton.BackgroundColor3 =
+                                Color3.fromRGB(0,170,255)
+
+                            OkButton.TextColor3 =
+                                Color3.fromRGB(255,255,255)
+
+                            local OkCorner =
+                                Instance.new("UICorner")
+
+                            OkCorner.CornerRadius = UDim.new(0,8)
                             OkCorner.Parent = OkButton
 
-                            -- Khi bấm nút OK mới chính thức đóng và dọn dẹp GUI mua hàng
                             OkButton.MouseButton1Click:Connect(function()
-                                local sheetContainer = buyButton:FindFirstAncestor("SheetContainer")
+
+                                local sheetContainer =
+                                    buyButton:FindFirstAncestor(
+                                        "SheetContainer"
+                                    )
+
                                 if sheetContainer then
-                                    sheetContainer.Visible = false -- Tắt hoàn toàn GUI mua hàng gốc
+                                    sheetContainer.Visible = false
                                 end
-                                SuccessFrame:Destroy() -- Xóa bảng thông báo giả lập
-                                if content then 
-                                    content.Visible = true -- Reset lại trạng thái ban đầu cho món đồ tiếp theo
+
+                                SuccessFrame:Destroy()
+
+                                if content then
+                                    content.Visible = true
                                 end
                             end)
                         end)
+
                     else
-                        Logs.Text = Logs.Text .. "\n[THẤT BẠI] Số dư không đủ! (Giá: " .. LastPrice .. ")"
+
+                        Logs.Text =
+                            Logs.Text ..
+                            "\n[FAILED] Not enough balance"
                     end
                 end)
             end
@@ -422,21 +529,36 @@ local function Patch(v)
 end
 
 --========================================================================
--- KHỞI CHẠY HỆ THỐNG LẮNG NGHE (HOOK)
+-- INITIAL SCAN
 --========================================================================
 
--- Quét toàn bộ các UI có sẵn lúc inject script
 for _, v in pairs(CoreGui:GetDescendants()) do
-    pcall(function()
-        Patch(v)
-    end)
-end
 
--- Lắng nghe các UI xuất hiện sau (Khi bấm vào vật phẩm trong game)
-game.CoreGui.DescendantAdded:Connect(function(v)
-    task.defer(function()
+    if v:IsA("TextLabel")
+    or v:IsA("TextButton") then
+
         pcall(function()
             Patch(v)
         end)
+    end
+end
+
+--========================================================================
+-- LIVE SCAN
+--========================================================================
+
+CoreGui.DescendantAdded:Connect(function(v)
+
+    if not v:IsA("TextLabel")
+    and not v:IsA("TextButton") then
+        return
+    end
+
+    task.defer(function()
+
+        pcall(function()
+            Patch(v)
+        end)
+
     end)
 end)
